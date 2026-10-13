@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Expense Calculator & Budget Planner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-full-width {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Banner -->
+    <header class="no-print bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+                    <i data-lucide="wallet" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-snug flex items-center gap-2">
+                        Monthly Expense Calculator
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300">Planner</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Track rent, EB bill, groceries & financial goals</p>
+                </div>
+            </div>
+
+            <!-- Header Right Action Buttons -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <button onclick="openBudgetModal()" class="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    <span class="hidden xs:inline">Set Budget</span>
+                </button>
+                <button onclick="window.print()" class="p-2 sm:px-3 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer" title="Print or Export Summary">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Print Report</span>
+                </button>
+                <button id="themeToggleBtn" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer" title="Toggle Theme">
+                    <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                    <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs (Dashboard vs 50/30/20 Insights) -->
+    <div class="no-print bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6 text-sm font-semibold">
+            <button onclick="switchTab('dashboard')" id="tabBtnDashboard" class="py-3 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 flex items-center gap-2 transition-colors cursor-pointer">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview & Tracker
+            </button>
+            <button onclick="switchTab('insights')" id="tabBtnInsights" class="py-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer">
+                <i data-lucide="pie-chart" class="w-4 h-4"></i> 50/30/20 Insights & Breakdown
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ================= TAB 1: OVERVIEW & TRACKER ================= -->
+        <div id="viewDashboard" class="space-y-6">
+
+            <!-- Top Summary Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- Monthly Budget Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Budget</span>
+                        <div class="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                            <i data-lucide="target" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div id="statBudgetDisplay" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">$0.00</div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                            <span>Income / Goal target set</span>
+                            <button onclick="openBudgetModal()" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline no-print">(Edit)</button>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Total Spent Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Spent</span>
+                        <div class="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                            <i data-lucide="trending-up" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div id="statSpentDisplay" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">$0.00</div>
+                        <!-- Progress Bar -->
+                        <div class="mt-2">
+                            <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                <span id="budgetPercentLabel">0% of budget</span>
+                                <span id="pendingAmountLabel" class="text-amber-600 dark:text-amber-400 font-medium">$0 Pending</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div id="budgetProgressBar" class="h-full bg-indigo-600 transition-all duration-500 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remaining Balance Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Remaining Balance</span>
+                        <div id="statBalanceIconBox" class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                            <i data-lucide="scale" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div id="statBalanceDisplay" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">$0.00</div>
+                        <p id="statBalanceSubtext" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Available to spend or save</p>
+                    </div>
+                </div>
+
+                <!-- Daily Avg & Fixed/Var Summary Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Quick Metrics</span>
+                        <div class="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                            <i data-lucide="zap" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 space-y-1.5 text-xs">
+                        <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">Daily Avg (30 days):</span>
+                            <span id="statDailyAvg" class="font-bold text-slate-800 dark:text-slate-200">$0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
+                            <span class="text-slate-500 dark:text-slate-400">Fixed vs Variable:</span>
+                            <span id="statFixedVar" class="font-bold text-slate-800 dark:text-slate-200">0% / 0%</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1">
+                            <span class="text-slate-500 dark:text-slate-400">Top Category:</span>
+                            <span id="statTopCategory" class="font-bold text-indigo-600 dark:text-indigo-400 truncate max-w-[110px]">None</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Main Grid: Chart & Quick Presets / Add Form -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left: Category Chart & Distribution (5 cols) -->
+                <div class="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-500"></i> Expenses by Category
+                            </h2>
+                            <span id="chartTotalCount" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">0 items</span>
+                        </div>
+                        <div class="relative w-full h-64 flex items-center justify-center">
+                            <canvas id="categoryChart"></canvas>
+                            <div id="chartEmptyMessage" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hidden">
+                                <i data-lucide="receipt" class="w-10 h-10 mb-2 stroke-1"></i>
+                                <span class="text-xs">No expenses added yet</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Legend Badges Summary -->
+                    <div id="chartLegendBadges" class="mt-4 flex flex-wrap gap-1.5 justify-center text-[11px]">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <!-- Right: Presets & Form Section (7 cols) -->
+                <div class="no-print lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-4">
+                    
+                    <!-- Presets Header -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i> Quick-Add Preset Bills
+                            </span>
+                            <span class="text-[11px] text-slate-400">Click to fill form quickly</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="applyPreset('Rent / Housing', 'Housing', 'Fixed')" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                                🏠 Rent
+                            </button>
+                            <button onclick="applyPreset('Electricity (EB Bill)', 'Utilities', 'Variable')" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-600 dark:hover:text-amber-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                                ⚡ EB Bill
+                            </button>
+                            <button onclick="applyPreset('Monthly Groceries', 'Groceries', 'Variable')" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 hover:text-emerald-600 dark:hover:text-emerald-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                                🛒 Groceries
+                            </button>
+                            <button onclick="applyPreset('Wi-Fi / Broadband', 'Utilities', 'Fixed')" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 hover:text-blue-600 dark:hover:text-blue-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                                📶 Internet
+                            </button>
+                            <button onclick="applyPreset('Maid / House Cook', 'Housing', 'Fixed')" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-600 dark:hover:text-rose-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                                🧹 Maid/Cook
+                            </button>
+                            <button onclick="applyPreset('Streaming Subscriptions', 'Subscriptions', 'Fixed')" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/60 hover:text-purple-600 dark:hover:text-purple-300 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                                🎬 Subscriptions
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100 dark:border-slate-800 my-2">
+
+                    <!-- Add / Edit Expense Form -->
+                    <form id="expenseForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                        <input type="hidden" id="editingId" value="">
+                        
+                        <div class="flex items-center justify-between">
+                            <h2 id="formHeading" class="font-bold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-500"></i> Add New Expense
+                            </h2>
+                            <button type="button" id="cancelEditBtn" onclick="resetForm()" class="hidden text-xs text-rose-500 hover:underline">Cancel Editing</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Name -->
+                            <div>
+                                <label for="inpName" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Expense Name *</label>
+                                <input type="text" id="inpName" required placeholder="e.g., EB Electricity Bill" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                            </div>
+
+                            <!-- Amount -->
+                            <div>
+                                <label for="inpAmount" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Amount ($) *</label>
+                                <input type="number" id="inpAmount" step="0.01" min="0.01" required placeholder="0.00" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                            </div>
+
+                            <!-- Category -->
+                            <div>
+                                <label for="inpCategory" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Category *</label>
+                                <select id="inpCategory" required class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                                    <option value="Housing">Housing / Rent</option>
+                                    <option value="Groceries">Groceries</option>
+                                    <option value="Utilities">Utilities (EB, Water, Gas)</option>
+                                    <option value="Transportation">Transportation / Fuel</option>
+                                    <option value="Subscriptions">Subscriptions & Phone</option>
+                                    <option value="Dining">Dining & Entertainment</option>
+                                    <option value="Medical">Medical & Health</option>
+                                    <option value="Savings">Savings & Investments</option>
+                                    <option value="Miscellaneous">Miscellaneous</option>
+                                </select>
+                            </div>
+
+                            <!-- Type: Fixed vs Variable -->
+                            <div>
+                                <label for="inpType" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Expense Type</label>
+                                <select id="inpType" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                                    <option value="Fixed">Fixed (e.g. Rent, Insurance)</option>
+                                    <option value="Variable">Variable (e.g. EB Bill, Food)</option>
+                                </select>
+                            </div>
+
+                            <!-- Due Date -->
+                            <div>
+                                <label for="inpDueDate" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Due Date</label>
+                                <input type="date" id="inpDueDate" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                            </div>
+
+                            <!-- Payment Status -->
+                            <div>
+                                <label for="inpStatus" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Payment Status</label>
+                                <select id="inpStatus" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                                    <option value="Pending">Pending ⏳</option>
+                                    <option value="Paid">Paid ✅</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Form Submit Button -->
+                        <button type="submit" id="submitFormBtn" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Add Expense Item
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+
+            <!-- Expense Items List & Management Section -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+                
+                <!-- Table Controls Header (Search, Filters, Sort) -->
+                <div class="no-print p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-bold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <i data-lucide="list" class="w-4 h-4 text-indigo-500"></i> Monthly Expense Items
+                        </h2>
+                        <span id="filteredCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">0</span>
+                    </div>
+
+                    <!-- Search and Filter Tools -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Search Box -->
+                        <div class="relative min-w-[180px] flex-1 sm:flex-initial">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="filterSearch" oninput="renderApp()" placeholder="Search items..." class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <!-- Category Filter -->
+                        <select id="filterCategory" onchange="renderApp()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ALL">All Categories</option>
+                            <option value="Housing">Housing</option>
+                            <option value="Groceries">Groceries</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Transportation">Transportation</option>
+                            <option value="Subscriptions">Subscriptions</option>
+                            <option value="Dining">Dining</option>
+                            <option value="Medical">Medical</option>
+                            <option value="Savings">Savings</option>
+                            <option value="Miscellaneous">Misc</option>
+                        </select>
+
+                        <!-- Status Filter -->
+                        <select id="filterStatus" onchange="renderApp()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ALL">All Status</option>
+                            <option value="Paid">Paid Only</option>
+                            <option value="Pending">Pending Only</option>
+                        </select>
+
+                        <!-- Sort By -->
+                        <select id="sortBy" onchange="renderApp()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="newest">Sort: Recent First</option>
+                            <option value="amount-desc">Sort: Highest $</option>
+                            <option value="amount-asc">Sort: Lowest $</option>
+                            <option value="due-date">Sort: Due Date</option>
+                        </select>
+
+                        <!-- Bulk Clear Button -->
+                        <button onclick="clearAllExpenses()" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" title="Clear All Expenses">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Expense Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                <th class="py-3 px-4">Expense Item</th>
+                                <th class="py-3 px-4">Category</th>
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Due Date</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4 text-right">Amount</th>
+                                <th class="py-3 px-4 text-center no-print">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+
+                    <!-- Empty State -->
+                    <div id="emptyTableState" class="p-8 text-center hidden">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 flex items-center justify-center mx-auto mb-2">
+                            <i data-lucide="inbox" class="w-6 h-6"></i>
+                        </div>
+                        <p class="font-semibold text-slate-700 dark:text-slate-300 text-sm">No expenses match your criteria</p>
+                        <p class="text-xs text-slate-400 mt-1">Try resetting search filters or add a new bill using the form above.</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================= TAB 2: INSIGHTS & 50/30/20 BREAKDOWN ================= -->
+        <div id="viewInsights" class="hidden space-y-6">
+            
+            <!-- Intro Banner -->
+            <div class="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl p-5">
+                <div class="flex items-start gap-3">
+                    <div class="p-2.5 rounded-xl bg-indigo-600 text-white shadow-md">
+                        <i data-lucide="compass" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">Smart Financial Budget Breakdown</h2>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                            The popular <strong class="text-indigo-600 dark:text-indigo-400">50 / 30 / 20 Rule</strong> suggests allocating 
+                            <strong>50%</strong> of income for Essential Needs (Rent, EB Bill, Groceries), 
+                            <strong>30%</strong> for Wants (Dining, Subscriptions), and 
+                            <strong>20%</strong> for Savings & Debt Payoff.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 50/30/20 Comparison Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                
+                <!-- Needs Card (50%) -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-full">50% Needs</span>
+                            <i data-lucide="home" class="w-5 h-5 text-blue-500"></i>
+                        </div>
+                        <div class="text-xs text-slate-500">Target Budget: <span id="targetNeedsVal" class="font-bold text-slate-800 dark:text-slate-200">$0.00</span></div>
+                        <div id="actualNeedsVal" class="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">$0.00</div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Housing, Utilities, Groceries, Medical</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex justify-between text-xs mb-1 font-semibold">
+                            <span>Usage vs Budget</span>
+                            <span id="needsPercentBadge">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div id="needsProgressBar" class="h-full bg-blue-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wants Card (30%) -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2.5 py-1 rounded-full">30% Wants</span>
+                            <i data-lucide="tv" class="w-5 h-5 text-purple-500"></i>
+                        </div>
+                        <div class="text-xs text-slate-500">Target Budget: <span id="targetWantsVal" class="font-bold text-slate-800 dark:text-slate-200">$0.00</span></div>
+                        <div id="actualWantsVal" class="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">$0.00</div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Dining, Subscriptions, Entertainment</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex justify-between text-xs mb-1 font-semibold">
+                            <span>Usage vs Budget</span>
+                            <span id="wantsPercentBadge">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div id="wantsProgressBar" class="h-full bg-purple-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Savings Card (20%) -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full">20% Savings</span>
+                            <i data-lucide="piggy-bank" class="w-5 h-5 text-emerald-500"></i>
+                        </div>
+                        <div class="text-xs text-slate-500">Target Goal: <span id="targetSavingsVal" class="font-bold text-slate-800 dark:text-slate-200">$0.00</span></div>
+                        <div id="actualSavingsVal" class="text-2xl font-extrabold mt-1 text-slate-900 dark:text-white">$0.00</div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Emergency Fund, Investments, Debt</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex justify-between text-xs mb-1 font-semibold">
+                            <span>Goal Achieved</span>
+                            <span id="savingsPercentBadge">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div id="savingsProgressBar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Percentage Share Table Breakdown -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="table" class="w-4 h-4 text-indigo-500"></i> Category Percentage Share Breakdown
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase font-semibold">
+                                <th class="pb-2">Category</th>
+                                <th class="pb-2">Total Amount</th>
+                                <th class="pb-2">% Share of Spend</th>
+                                <th class="pb-2">% Share of Income</th>
+                                <th class="pb-2">Items Count</th>
+                            </tr>
+                        </thead>
+                        <tbody id="insightsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal: Budget / Income Goal Settings -->
+    <div id="budgetModal" class="no-print fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden transition-opacity">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+            <button onclick="closeBudgetModal()" class="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <i data-lucide="sliders" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-slate-900 dark:text-white">Set Monthly Budget</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Enter your net monthly income or spending limit</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label for="inpBudgetVal" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Monthly Income / Budget Limit ($)</label>
+                    <input type="number" id="inpBudgetVal" step="10" min="0" placeholder="e.g., 3000" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeBudgetModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onclick="saveBudgetGoal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 transition-colors">Save Goal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast" class="no-print fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
+        <span id="toastMsg">Action completed</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Default initial data if localStorage is empty
+        const defaultExpenses = [
+            { id: '1', name: 'Apartment Rent', amount: 1200, category: 'Housing', type: 'Fixed', dueDate: getFormattedDate(1), status: 'Paid' },
+            { id: '2', name: 'Electricity (EB Bill)', amount: 115, category: 'Utilities', type: 'Variable', dueDate: getFormattedDate(10), status: 'Pending' },
+            { id: '3', name: 'Supermarket Groceries', amount: 350, category: 'Groceries', type: 'Variable', dueDate: getFormattedDate(15), status: 'Paid' },
+            { id: '4', name: 'High-speed Fiber Wi-Fi', amount: 60, category: 'Utilities', type: 'Fixed', dueDate: getFormattedDate(5), status: 'Paid' },
+            { id: '5', name: 'Cook & Maid Salary', amount: 150, category: 'Housing', type: 'Fixed', dueDate: getFormattedDate(7), status: 'Pending' }
+        ];
+
+        // App State
+        let expenses = [];
+        let monthlyBudget = 3000;
+        let categoryChartInstance = null;
+
+        // Category Colors & Icons mapping
+        const categoryMeta = {
+            'Housing': { color: '#6366f1', icon: 'home', badgeBg: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
+            'Groceries': { color: '#10b981', icon: 'shopping-cart', badgeBg: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+            'Utilities': { color: '#f59e0b', icon: 'zap', badgeBg: 'bg-amber-50 text-amber-600 border-amber-200' },
+            'Transportation': { color: '#06b6d4', icon: 'car', badgeBg: 'bg-cyan-50 text-cyan-600 border-cyan-200' },
+            'Subscriptions': { color: '#8b5cf6', icon: 'tv', badgeBg: 'bg-purple-50 text-purple-600 border-purple-200' },
+            'Dining': { color: '#f43f5e', icon: 'utensils', badgeBg: 'bg-rose-50 text-rose-600 border-rose-200' },
+            'Medical': { color: '#ef4444', icon: 'activity', badgeBg: 'bg-red-50 text-red-600 border-red-200' },
+            'Savings': { color: '#059669', icon: 'piggy-bank', badgeBg: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+            'Miscellaneous': { color: '#64748b', icon: 'box', badgeBg: 'bg-slate-100 text-slate-600 border-slate-200' }
+        };
+
+        // Helper date generator
+        function getFormattedDate(dayOffset) {
+            const date = new Date();
+            date.setDate(dayOffset);
+            return date.toISOString().split('T')[0];
+        }
+
+        // Initialize App on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            initChart();
+            renderApp();
+            lucide.createIcons();
+
+            // Dark theme toggle listener
+            document.getElementById('themeToggleBtn').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                setTimeout(renderChart, 100);
+            });
+        });
+
+        // Save & Load LocalStorage
+        function saveToStorage() {
+            localStorage.setItem('monthly_expenses_data', JSON.stringify(expenses));
+            localStorage.setItem('monthly_budget_val', monthlyBudget.toString());
+        }
+
+        function loadFromStorage() {
+            const savedData = localStorage.getItem('monthly_expenses_data');
+            const savedBudget = localStorage.getItem('monthly_budget_val');
+
+            if (savedData) {
+                try { expenses = JSON.parse(savedData); } catch (e) { expenses = defaultExpenses; }
+            } else {
+                expenses = defaultExpenses;
+            }
+
+            if (savedBudget) {
+                monthlyBudget = parseFloat(savedBudget) || 3000;
+            }
+        }
+
+        // Format Currency Helper
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+        }
+
+        // Main Render Function
+        function renderApp() {
+            renderSummaryCards();
+            renderTable();
+            renderChart();
+            renderInsights();
+            lucide.createIcons();
+        }
+
+        // Render Summary Dashboard Cards
+        function renderSummaryCards() {
+            const totalSpent = expenses.reduce((sum, item) => sum + item.amount, 0);
+            const totalPending = expenses.filter(i => i.status === 'Pending').reduce((sum, item) => sum + item.amount, 0);
+            const remaining = monthlyBudget - totalSpent;
+            const percentUsed = monthlyBudget > 0 ? Math.min(Math.round((totalSpent / monthlyBudget) * 100), 100) : 0;
+
+            document.getElementById('statBudgetDisplay').textContent = formatCurrency(monthlyBudget);
+            document.getElementById('statSpentDisplay').textContent = formatCurrency(totalSpent);
+            document.getElementById('statBalanceDisplay').textContent = formatCurrency(remaining);
+            document.getElementById('pendingAmountLabel').textContent = `${formatCurrency(totalPending)} Pending`;
+
+            // Balance Color Adjust
+            const balanceDisplay = document.getElementById('statBalanceDisplay');
+            const balanceIconBox = document.getElementById('statBalanceIconBox');
+            const balanceSubtext = document.getElementById('statBalanceSubtext');
+
+            if (remaining < 0) {
+                balanceDisplay.className = "text-2xl sm:text-3xl font-extrabold tracking-tight text-rose-600 dark:text-rose-400";
+                balanceIconBox.className = "p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400";
+                balanceSubtext.textContent = "Over budget limit!";
+            } else if (remaining < monthlyBudget * 0.15) {
+                balanceDisplay.className = "text-2xl sm:text-3xl font-extrabold tracking-tight text-amber-600 dark:text-amber-400";
+                balanceIconBox.className = "p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400";
+                balanceSubtext.textContent = "Near budget cap limit";
+            } else {
+                balanceDisplay.className = "text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400";
+                balanceIconBox.className = "p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400";
+                balanceSubtext.textContent = "Available to spend or save";
+            }
+
+            // Progress Bar
+            document.getElementById('budgetPercentLabel').textContent = `${percentUsed}% of budget`;
+            const bar = document.getElementById('budgetProgressBar');
+            bar.style.width = `${percentUsed}%`;
+            if (percentUsed >= 100) bar.className = "h-full bg-rose-600 transition-all duration-500 rounded-full";
+            else if (percentUsed >= 85) bar.className = "h-full bg-amber-500 transition-all duration-500 rounded-full";
+            else bar.className = "h-full bg-indigo-600 transition-all duration-500 rounded-full";
+
+            // Quick Metrics
+            const dailyAvg = totalSpent / 30;
+            document.getElementById('statDailyAvg').textContent = formatCurrency(dailyAvg);
+
+            const fixedTotal = expenses.filter(i => i.type === 'Fixed').reduce((sum, item) => sum + item.amount, 0);
+            const varTotal = expenses.filter(i => i.type === 'Variable').reduce((sum, item) => sum + item.amount, 0);
+            const fixedPct = totalSpent > 0 ? Math.round((fixedTotal / totalSpent) * 100) : 0;
+            const varPct = totalSpent > 0 ? Math.round((varTotal / totalSpent) * 100) : 0;
+            document.getElementById('statFixedVar').textContent = `${fixedPct}% / ${varPct}%`;
+
+            // Top Category
+            const catTotals = {};
+            expenses.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
+            let topCat = 'None';
+            let maxVal = 0;
+            Object.keys(catTotals).forEach(cat => {
+                if (catTotals[cat] > maxVal) {
+                    maxVal = catTotals[cat];
+                    topCat = cat;
+                }
+            });
+            document.getElementById('statTopCategory').textContent = topCat;
+        }
+
+        // Render Expense Table
+        function renderTable() {
+            const tableBody = document.getElementById('expenseTableBody');
+            const emptyState = document.getElementById('emptyTableState');
+
+            const searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
+            const catFilter = document.getElementById('filterCategory').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Filtering
+            let filtered = expenses.filter(item => {
+                const matchSearch = item.name.toLowerCase().includes(searchVal) || item.category.toLowerCase().includes(searchVal);
+                const matchCat = catFilter === 'ALL' || item.category === catFilter;
+                const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
+                return matchSearch && matchCat && matchStatus;
+            });
+
+            // Sorting
+            filtered.sort((a, b) => {
+                if (sortBy === 'amount-desc') return b.amount - a.amount;
+                if (sortBy === 'amount-asc') return a.amount - b.amount;
+                if (sortBy === 'due-date') return new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31');
+                return b.id - a.id; // Newest first default
+            });
+
+            document.getElementById('filteredCountBadge').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            tableBody.innerHTML = filtered.map(item => {
+                const meta = categoryMeta[item.category] || categoryMeta['Miscellaneous'];
+                const isPaid = item.status === 'Paid';
+                const isOverdue = !isPaid && item.dueDate && new Date(item.dueDate) < new Date().setHours(0,0,0,0);
+
+                return `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group">
+                        <!-- Name -->
+                        <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${meta.badgeBg}">
+                                    <i data-lucide="${meta.icon}" class="w-4 h-4"></i>
+                                </div>
+                                <span class="${isPaid ? 'line-through text-slate-400 dark:text-slate-500' : ''}">${escapeHtml(item.name)}</span>
+                            </div>
+                        </td>
+
+                        <!-- Category -->
+                        <td class="py-3 px-4">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full border ${meta.badgeBg}">
+                                ${item.category}
+                            </span>
+                        </td>
+
+                        <!-- Type -->
+                        <td class="py-3 px-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+                            ${item.type || 'Variable'}
+                        </td>
+
+                        <!-- Due Date -->
+                        <td class="py-3 px-4 text-xs font-medium">
+                            ${item.dueDate ? `
+                                <span class="${isOverdue ? 'text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1' : 'text-slate-600 dark:text-slate-400'}">
+                                    ${isOverdue ? '<i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Overdue: ' : ''}${item.dueDate}
+                                </span>
+                            ` : '<span class="text-slate-400">-</span>'}
+                        </td>
+
+                        <!-- Status -->
+                        <td class="py-3 px-4">
+                            <button onclick="toggleStatus('${item.id}')" class="px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                isPaid 
+                                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200' 
+                                : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 hover:bg-amber-200'
+                            }">
+                                <i data-lucide="${isPaid ? 'check-circle' : 'clock'}" class="w-3.5 h-3.5"></i>
+                                ${item.status}
+                            </button>
+                        </td>
+
+                        <!-- Amount -->
+                        <td class="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                            ${formatCurrency(item.amount)}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="py-3 px-4 text-center no-print">
+                            <div class="flex items-center justify-center space-x-1 opacity-90 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editExpense('${item.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors" title="Edit Item">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteExpense('${item.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors" title="Delete Item">
+                                    <i data-lucide="trash" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Chart Initialization & Rendering
+        function initChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            categoryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '72%'
+                }
+            });
+        }
+
+        function renderChart() {
+            if (!categoryChartInstance) return;
+
+            const totals = {};
+            expenses.forEach(e => {
+                totals[e.category] = (totals[e.category] || 0) + e.amount;
+            });
+
+            const labels = Object.keys(totals);
+            const data = Object.values(totals);
+            const colors = labels.map(l => (categoryMeta[l] ? categoryMeta[l].color : '#64748b'));
+
+            const emptyMsg = document.getElementById('chartEmptyMessage');
+            document.getElementById('chartTotalCount').textContent = `${expenses.length} items`;
+
+            if (data.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                categoryChartInstance.data.labels = [];
+                categoryChartInstance.data.datasets[0].data = [];
+            } else {
+                emptyMsg.classList.add('hidden');
+                categoryChartInstance.data.labels = labels;
+                categoryChartInstance.data.datasets[0].data = data;
+                categoryChartInstance.data.datasets[0].backgroundColor = colors;
+            }
+
+            categoryChartInstance.update();
+
+            // Render Custom Badges Below Chart
+            const legendBox = document.getElementById('chartLegendBadges');
+            const totalSum = data.reduce((a, b) => a + b, 0);
+
+            legendBox.innerHTML = labels.map((cat, i) => {
+                const pct = totalSum > 0 ? Math.round((data[i] / totalSum) * 100) : 0;
+                return `
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
+                        <span class="w-2 h-2 rounded-full" style="background-color: ${colors[i]}"></span>
+                        ${cat}: <strong>${pct}%</strong>
+                    </span>
+                `;
+            }).join('');
+        }
+
+        // Render 50/30/20 Insights Tab
+        function renderInsights() {
+            const needsCategories = ['Housing', 'Utilities', 'Groceries', 'Medical', 'Transportation'];
+            const wantsCategories = ['Dining', 'Subscriptions', 'Miscellaneous'];
+            const savingsCategories = ['Savings'];
+
+            const needsActual = expenses.filter(i => needsCategories.includes(i.category)).reduce((sum, item) => sum + item.amount, 0);
+            const wantsActual = expenses.filter(i => wantsCategories.includes(i.category)).reduce((sum, item) => sum + item.amount, 0);
+            const savingsActual = expenses.filter(i => savingsCategories.includes(i.category)).reduce((sum, item) => sum + item.amount, 0);
+
+            const targetNeeds = monthlyBudget * 0.50;
+            const targetWants = monthlyBudget * 0.30;
+            const targetSavings = monthlyBudget * 0.20;
+
+            document.getElementById('targetNeedsVal').textContent = formatCurrency(targetNeeds);
+            document.getElementById('actualNeedsVal').textContent = formatCurrency(needsActual);
+            document.getElementById('needsPercentBadge').textContent = `${targetNeeds > 0 ? Math.round((needsActual / targetNeeds) * 100) : 0}%`;
+            document.getElementById('needsProgressBar').style.width = `${Math.min(targetNeeds > 0 ? (needsActual / targetNeeds) * 100 : 0, 100)}%`;
+
+            document.getElementById('targetWantsVal').textContent = formatCurrency(targetWants);
+            document.getElementById('actualWantsVal').textContent = formatCurrency(wantsActual);
+            document.getElementById('wantsPercentBadge').textContent = `${targetWants > 0 ? Math.round((wantsActual / targetWants) * 100) : 0}%`;
+            document.getElementById('wantsProgressBar').style.width = `${Math.min(targetWants > 0 ? (wantsActual / targetWants) * 100 : 0, 100)}%`;
+
+            document.getElementById('targetSavingsVal').textContent = formatCurrency(targetSavings);
+            document.getElementById('actualSavingsVal').textContent = formatCurrency(savingsActual);
+            document.getElementById('savingsPercentBadge').textContent = `${targetSavings > 0 ? Math.round((savingsActual / targetSavings) * 100) : 0}%`;
+            document.getElementById('savingsProgressBar').style.width = `${Math.min(targetSavings > 0 ? (savingsActual / targetSavings) * 100 : 0, 100)}%`;
+
+            // Percentage Table
+            const totalSpend = expenses.reduce((sum, item) => sum + item.amount, 0);
+            const catTotals = {};
+            const catCounts = {};
+
+            expenses.forEach(e => {
+                catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+                catCounts[e.category] = (catCounts[e.category] || 0) + 1;
+            });
+
+            const tbody = document.getElementById('insightsTableBody');
+            tbody.innerHTML = Object.keys(categoryMeta).map(cat => {
+                const amt = catTotals[cat] || 0;
+                const count = catCounts[cat] || 0;
+                const pctSpend = totalSpend > 0 ? ((amt / totalSpend) * 100).toFixed(1) : '0.0';
+                const pctIncome = monthlyBudget > 0 ? ((amt / monthlyBudget) * 100).toFixed(1) : '0.0';
+                const meta = categoryMeta[cat];
+
+                return `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td class="py-2.5 font-bold flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${meta.color}"></span>
+                            ${cat}
+                        </td>
+                        <td class="py-2.5 font-bold text-slate-800 dark:text-slate-200">${formatCurrency(amt)}</td>
+                        <td class="py-2.5 font-semibold text-indigo-600 dark:text-indigo-400">${pctSpend}%</td>
+                        <td class="py-2.5 text-slate-500">${pctIncome}%</td>
+                        <td class="py-2.5 text-slate-400">${count} items</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Form Submission Handler (Add / Edit)
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('editingId').value;
+            const name = document.getElementById('inpName').value.trim();
+            const amount = parseFloat(document.getElementById('inpAmount').value);
+            const category = document.getElementById('inpCategory').value;
+            const type = document.getElementById('inpType').value;
+            const dueDate = document.getElementById('inpDueDate').value;
+            const status = document.getElementById('inpStatus').value;
+
+            if (!name || isNaN(amount) || amount <= 0) return;
+
+            if (editId) {
+                // Update existing
+                const index = expenses.findIndex(i => i.id === editId);
+                if (index !== -1) {
+                    expenses[index] = { id: editId, name, amount, category, type, dueDate, status };
+                    showToast('Expense updated successfully!');
+                }
+            } else {
+                // Add new
+                const newItem = {
+                    id: Date.now().toString(),
+                    name,
+                    amount,
+                    category,
+                    type,
+                    dueDate,
+                    status
+                };
+                expenses.unshift(newItem);
+                showToast('New expense added!');
+            }
+
+            saveToStorage();
+            resetForm();
+            renderApp();
+        }
+
+        // Apply Quick Presets
+        function applyPreset(name, category, type) {
+            document.getElementById('inpName').value = name;
+            document.getElementById('inpCategory').value = category;
+            document.getElementById('inpType').value = type;
+            document.getElementById('inpAmount').focus();
+            showToast(`Applied preset: ${name}`);
+        }
+
+        // Toggle Status Inline
+        function toggleStatus(id) {
+            const item = expenses.find(i => i.id === id);
+            if (item) {
+                item.status = item.status === 'Paid' ? 'Pending' : 'Paid';
+                saveToStorage();
+                renderApp();
+                showToast(`Status updated to ${item.status}`);
+            }
+        }
+
+        // Edit Expense
+        function editExpense(id) {
+            const item = expenses.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('editingId').value = item.id;
+            document.getElementById('inpName').value = item.name;
+            document.getElementById('inpAmount').value = item.amount;
+            document.getElementById('inpCategory').value = item.category;
+            document.getElementById('inpType').value = item.type || 'Variable';
+            document.getElementById('inpDueDate').value = item.dueDate || '';
+            document.getElementById('inpStatus').value = item.status;
+
+            document.getElementById('formHeading').innerHTML = '<i data-lucide="edit-3" class="w-4 h-4 text-indigo-500"></i> Edit Expense Item';
+            document.getElementById('submitFormBtn').innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Save Changes';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+            document.getElementById('inpName').focus();
+            lucide.createIcons();
+        }
+
+        // Reset Form
+        function resetForm() {
+            document.getElementById('expenseForm').reset();
+            document.getElementById('editingId').value = '';
+            document.getElementById('formHeading').innerHTML = '<i data-lucide="plus-circle" class="w-4 h-4 text-emerald-500"></i> Add New Expense';
+            document.getElementById('submitFormBtn').innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Add Expense Item';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        // Delete Expense
+        function deleteExpense(id) {
+            expenses = expenses.filter(i => i.id !== id);
+            saveToStorage();
+            renderApp();
+            showToast('Expense item deleted');
+        }
+
+        // Clear All
+        function clearAllExpenses() {
+            if (expenses.length === 0) return;
+            if (confirm('Are you sure you want to clear all monthly expenses?')) {
+                expenses = [];
+                saveToStorage();
+                renderApp();
+                showToast('All expenses cleared');
+            }
+        }
+
+        // Budget Modal Controls
+        function openBudgetModal() {
+            document.getElementById('inpBudgetVal').value = monthlyBudget;
+            document.getElementById('budgetModal').classList.remove('hidden');
+        }
+
+        function closeBudgetModal() {
+            document.getElementById('budgetModal').classList.add('hidden');
+        }
+
+        function saveBudgetGoal() {
+            const val = parseFloat(document.getElementById('inpBudgetVal').value);
+            if (!isNaN(val) && val >= 0) {
+                monthlyBudget = val;
+                saveToStorage();
+                renderApp();
+                closeBudgetModal();
+                showToast('Monthly budget updated!');
+            }
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            const dashboardView = document.getElementById('viewDashboard');
+            const insightsView = document.getElementById('viewInsights');
+            const btnDash = document.getElementById('tabBtnDashboard');
+            const btnInsights = document.getElementById('tabBtnInsights');
+
+            if (tabName === 'dashboard') {
+                dashboardView.classList.remove('hidden');
+                insightsView.classList.add('hidden');
+
+                btnDash.className = "py-3 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 flex items-center gap-2 transition-colors cursor-pointer";
+                btnInsights.className = "py-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer";
+            } else {
+                dashboardView.classList.add('hidden');
+                insightsView.classList.remove('hidden');
+
+                btnInsights.className = "py-3 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 flex items-center gap-2 transition-colors cursor-pointer";
+                btnDash.className = "py-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer";
+            }
+        }
+
+        // Utility HTML Escaper
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        // Toast Helper
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
